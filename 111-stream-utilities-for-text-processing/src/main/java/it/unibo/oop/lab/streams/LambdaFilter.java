@@ -7,8 +7,10 @@ import java.awt.GridLayout;
 import java.awt.LayoutManager;
 import java.awt.Toolkit;
 import java.io.Serial;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -36,12 +38,28 @@ public final class LambdaFilter extends JFrame {
 
     @Serial
     private static final long serialVersionUID = 1760990730218643730L;
+    private static final String REGEX = "[\\p{Punct}\\p{Space}]+";
 
     private enum Command {
         /**
          * Commands.
          */
-        IDENTITY("No modifications", Function.identity());
+        IDENTITY("No modifications", Function.identity()),
+        TOLOWERCASE("To Lowercase", String::toLowerCase),
+        LENGHT("Lenght", s -> Long.toString(s.length() - s.lines().count() + 1)),
+        LINES("Lines", s -> Long.toString(s.lines().count())),
+        LIST("List Words", s -> 
+            Arrays.stream(s.split(REGEX))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .collect(Collectors.joining(" "))
+        ),
+        COUNT_WORDS("Count words", s -> 
+            Arrays.stream(s.split(REGEX))
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet().stream()
+                .map(a -> a.getKey() + " -> " + a.getValue())
+                .collect(Collectors.joining("\n"))
+        );
 
         private final String commandName;
         private final Function<String, String> fun;
