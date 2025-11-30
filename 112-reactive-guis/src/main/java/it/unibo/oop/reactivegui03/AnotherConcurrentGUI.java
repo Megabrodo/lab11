@@ -9,6 +9,7 @@ import javax.swing.SwingUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import it.unibo.oop.JFrameUtil;
 
 import java.io.Serial;
@@ -17,12 +18,18 @@ import java.lang.reflect.InvocationTargetException;
 /**
  * Third experiment with reactive gui.
  */
+@SuppressFBWarnings(value = "SE_BAD_FIELD", justification = "False positive by spotbugs")
 public final class AnotherConcurrentGUI extends JFrame {
 
     @Serial
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = LoggerFactory.getLogger(AnotherConcurrentGUI.class);
     private final JLabel display = new JLabel();
+    private final JButton stop = new JButton("stop");
+    private final JButton up = new JButton("up");
+    private final JButton down = new JButton("down");
+    private final Agent agent = new Agent();
+    private final AutoAgent autoAgent = new AutoAgent();
 
     /**
      * Builds a new CGUI.
@@ -32,11 +39,8 @@ public final class AnotherConcurrentGUI extends JFrame {
         JFrameUtil.dimensionJFrame(this);
         final JPanel panel = new JPanel();
         panel.add(display);
-        final JButton stop = new JButton("stop");
         panel.add(stop);
-        final JButton up = new JButton("up");
         panel.add(up);
-        final JButton down = new JButton("down");
         panel.add(down);
         this.getContentPane().add(panel);
         this.setVisible(true);
@@ -45,21 +49,24 @@ public final class AnotherConcurrentGUI extends JFrame {
          * thread management should be left to
          * java.util.concurrent.ExecutorService
          */
-        final Agent agent = new Agent();
         new Thread(agent).start();
-
-        final AutoAgent autoAgent = new AutoAgent(agent, down, up);
         new Thread(autoAgent).start();
         /*
          * Register a listener that stops it
          */
-        stop.addActionListener(e -> {
-            agent.stopCounting();
-            down.setEnabled(false);
-            up.setEnabled(false);
-        });
+        stop.addActionListener(e -> stopEverything());
         down.addActionListener(e -> agent.goDown());
         up.addActionListener(e -> agent.goUp());
+    }
+
+    private void stopEverything() {
+            agent.stopCounting();
+            autoAgent.stopCounting();
+            SwingUtilities.invokeLater(() -> {
+                stop.setEnabled(false);
+                up.setEnabled(false);
+                down.setEnabled(false);
+        });
     }
 
     /*
@@ -118,40 +125,32 @@ public final class AnotherConcurrentGUI extends JFrame {
 
     private final class AutoAgent implements Runnable {
 
+        private static final long STOPTIME = 10_000L;
         private volatile boolean stop;
-        private final Agent agent;
-        private final JButton down;
-        private final JButton up;
         private final long startTime;
 
-        public AutoAgent(Agent agent, JButton down, JButton up) {
-            this.agent = agent;
-            this.down = down;
-            this.up = up;
+        AutoAgent() {
             this.startTime = System.currentTimeMillis();
         }
 
         @Override
         public void run() {
-            while(!this.stop) {
+            while (!this.stop) {
                 try {
-                    long timePassed = System.currentTimeMillis() - startTime;
-                    if (timePassed >= 10000L) {
+                    final long timePassed = System.currentTimeMillis() - startTime;
+                    if (timePassed >= STOPTIME) {
                         stopEverything();
                     }
-                    System.out.println(timePassed);
+                    //System.out.println(timePassed);
                     Thread.sleep(100);
-                } catch (InterruptedException ex) {
+                } catch (final InterruptedException ex) {
                     LOGGER.error(ex.getMessage(), ex);
                 }
             }
         }
 
-        public void stopEverything() {
+        public void stopCounting() {
             this.stop = true;
-            agent.stopCounting();
-            up.setEnabled(false);
-            down.setEnabled(false);
         }
     }
 }
