@@ -141,7 +141,7 @@ public final class AnotherConcurrentGUI extends JFrame {
                     if (timePassed >= STOPTIME) {
                         stopEverything();
                     }
-                    //System.out.println(timePassed);
+                    System.out.println(timePassed);
                     Thread.sleep(100);
                 } catch (final InterruptedException ex) {
                     LOGGER.error(ex.getMessage(), ex);
